@@ -17,8 +17,8 @@ all_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 df['Day'] = pd.Categorical(df['Day'], categories=all_days, ordered=False)
 df = pd.get_dummies(df, columns=['Day'], drop_first=False)
 
-# Feature columns
-feature_cols = ['Rainfall', 'Is_Event_Day'] + \
+# Feature columns (remove Is_Event_Day)
+feature_cols = ['Rainfall'] + \
                [col for col in df.columns if col.startswith('Day_')] + \
                [col for col in df.columns if col.startswith('Month_')]
 X = df[feature_cols]
@@ -32,20 +32,18 @@ model.fit(X, y)
 st.set_page_config(page_title="Dezerland Visitor Predictor", layout="centered")
 st.title("🎢 Dezerland Daily Visitor Predictor")
 
-st.markdown("Predict how many guests will visit based on day, month, rain, and events.")
+st.markdown("Predict how many guests will visit based on day, month, and rain.")
 
 # --- User Inputs ---
 day = st.selectbox("Day of Week", all_days)
 month = st.selectbox("Month", all_months)
 rainfall = st.slider("Rainfall (inches)", min_value=0.0, max_value=2.0, step=0.1)
-event = st.checkbox("Special Event Day")
 
 # --- Build consistent input feature set ---
 day_columns = [f"Day_{d}" for d in all_days]
 month_columns = [f"Month_{m}" for m in all_months]
 input_data = {col: 0 for col in day_columns + month_columns}
 input_data['Rainfall'] = rainfall
-input_data['Is_Event_Day'] = 1 if event else 0
 input_data[f"Day_{day}"] = 1
 input_data[f"Month_{month}"] = 1
 
