@@ -13,7 +13,6 @@ df["Month"] = df["Date"].dt.month
 df["Day"] = pd.Categorical(df["Date"].dt.day_name(),
                            categories=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
 
-# One-hot encode
 df = pd.get_dummies(df, columns=["Day", "Month"], drop_first=False)
 
 # Define feature set used in model
@@ -24,7 +23,7 @@ feature_cols = ["Monthly_Rainfall_cm", "Is_School_Break"] + \
 X = df[feature_cols]
 y = df["Visitors"]
 
-# Train Gradient Boosting model
+# Retrain Gradient Boosting model with fixed features
 model = GradientBoostingRegressor(n_estimators=150, max_depth=5, learning_rate=0.1, subsample=0.8, random_state=42)
 model.fit(X, y)
 
