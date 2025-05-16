@@ -66,10 +66,22 @@ importances = pd.Series(model.feature_importances_, index=feature_cols)
 importances.index = importances.index.str.replace("Day_", "Day: ").str.replace("Month_", "Month: ")
 st.bar_chart(importances.sort_values())
 
-# --- Historical Trend ---
+# --- Historical Visitor Trends ---
 st.divider()
 st.subheader("📈 Historical Visitor Trends")
-st.caption("7-day rolling average of past attendance")
+st.caption("View both raw daily counts and smoothed 7-day averages")
 
-df["7-Day Avg"] = df["Visitors"].rolling(window=7).mean()
-st.line_chart(df.set_index("Date")[["7-Day Avg"]])
+chart_df = pd.read_csv("Dezerland_Visitors_Weather_School.csv")
+chart_df["Date"] = pd.to_datetime(chart_df["Date"])
+chart_df = chart_df.sort_values("Date")
+chart_df["7-Day Avg"] = chart_df["Visitors"].rolling(window=7, center=True).mean()
+
+st.line_chart(chart_df.set_index("Date")[["Visitors", "7-Day Avg"]])
+
+# --- Monthly Totals ---
+st.subheader("📊 Monthly Visitor Totals")
+monthly = chart_df.copy()
+monthly["Month"] = monthly["Date"].dt.to_period("M")
+monthly_summary = monthly.groupby("Month")["Visitors"].sum()
+monthly_summary.index = monthly_summary.index.astype(str)
+st.bar_chart(monthly_summary)
