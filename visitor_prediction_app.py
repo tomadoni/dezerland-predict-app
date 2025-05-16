@@ -1,86 +1,46 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.ensemble import GradientBoostingRegressor
 
-# Load enhanced dataset with rainfall and school break info
+# Load and preprocess raw data
 df = pd.read_csv("Dezerland_Visitors_Weather_School.csv")
 df["Date"] = pd.to_datetime(df["Date"])
-
-# --- Feature Engineering ---
 df["Month"] = df["Date"].dt.month
-df["Day"] = pd.Categorical(df["Date"].dt.day_name(),
-                           categories=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"])
+df["DayName"] = df["Date"].dt.day_name()
 
-df = pd.get_dummies(df, columns=["Day", "Month"], drop_first=False)
-
-# Define feature set used in model
-feature_cols = ["Monthly_Rainfall_cm", "Is_School_Break"] + \
-               [col for col in df.columns if col.startswith("Day_")] + \
-               [col for col in df.columns if col.startswith("Month_")]
-
-X = df[feature_cols]
-y = df["Visitors"]
-
-# Retrain Gradient Boosting model with fixed features
-model = GradientBoostingRegressor(n_estimators=150, max_depth=5, learning_rate=0.1, subsample=0.8, random_state=42)
-model.fit(X, y)
+# Compute average visitors per (Month, DayName)
+avg_lookup = df.groupby(["Month", "DayName"])["Visitors"].mean().reset_index()
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="Dezerland Visitor Predictor", layout="centered")
-st.title("🎢 Dezerland Visitor Predictor")
-st.markdown("Predict how many guests will visit Dezerland Park based on the day, month, and weather conditions.")
+st.set_page_config(page_title="Dezerland Visitor Predictor (Historical Average)", layout="centered")
+st.title("🎢 Dezerland Visitor Predictor (Historical Average)")
+st.markdown("Predict expected visitor count based on actual historical averages.")
 
 # --- User Inputs ---
-st.subheader("📅 Choose Conditions")
+st.subheader("📅 Choose Day")
 all_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 all_months = list(range(1, 13))
 
-day = st.selectbox("Day of the Week", all_days)
 month = st.selectbox("Month", all_months, format_func=lambda m: pd.to_datetime(f"2024-{m}-01").strftime('%B'))
-rainfall = st.slider("Monthly Rainfall (cm)", min_value=0.0, max_value=25.0, step=0.1)
-is_break = st.checkbox("Is School on Break?", value=False)
+day = st.selectbox("Day of the Week", all_days)
 
-# --- Build input vector ---
-day_columns = [f"Day_{d}" for d in all_days]
-month_columns = [f"Month_{m}" for m in all_months]
-input_data = {col: 0 for col in feature_cols}
-input_data["Monthly_Rainfall_cm"] = rainfall
-input_data["Is_School_Break"] = is_break
-input_data[f"Day_{day}"] = 1
-input_data[f"Month_{month}"] = 1
-input_df = pd.DataFrame([input_data])[feature_cols]
+# --- Predict from Lookup Table ---
+match = avg_lookup[(avg_lookup["Month"] == month) & (avg_lookup["DayName"] == day)]
 
-# --- Prediction ---
-prediction = model.predict(input_df)[0]
-st.metric(label="🎯 Predicted Visitors", value=f"{int(prediction):,}")
+if not match.empty:
+    prediction = int(match["Visitors"].values[0])
+    st.metric(label="🎯 Predicted Visitors (Historical Average)", value=f"{prediction:,}")
+else:
+    st.warning("No historical data found for that combination.")
 
-# --- Feature Importance ---
+# --- Historical Chart ---
 st.divider()
-st.subheader("📊 What Most Affects Visitor Counts?")
-st.caption("Larger values (in either direction) have more predictive power.")
-
-importances = pd.Series(model.feature_importances_, index=feature_cols)
-importances.index = importances.index.str.replace("Day_", "Day: ").str.replace("Month_", "Month: ")
-st.bar_chart(importances.sort_values())
-
-# --- Historical Visitor Trends ---
-st.divider()
-st.subheader("📈 Historical Visitor Trends")
-st.caption("View both raw daily counts and smoothed 7-day averages")
-
-chart_df = pd.read_csv("Dezerland_Visitors_Weather_School.csv")
-chart_df["Date"] = pd.to_datetime(chart_df["Date"])
-chart_df = chart_df.sort_values("Date")
-chart_df["7-Day Avg"] = chart_df["Visitors"].rolling(window=7, center=True).mean()
-
-st.line_chart(chart_df.set_index("Date")[["Visitors", "7-Day Avg"]])
-
-# --- Monthly Totals ---
-st.subheader("📊 Monthly Visitor Totals")
-monthly = chart_df.copy()
-monthly["Month"] = monthly["Date"].dt.to_period("M")
-monthly_summary = monthly.groupby("Month")["Visitors"].sum()
+st.subheader("📈 Monthly Visitor Totals")
+df["MonthPeriod"] = df["Date"].dt.to_period("M")
+monthly_summary = df.groupby("MonthPeriod")["Visitors"].sum()
 monthly_summary.index = monthly_summary.index.astype(str)
 st.bar_chart(monthly_summary)
+
+# --- Optional: Show full lookup table ---
+st.divider()
+with st.expander("📊 Show Full Monthly-Day Visitor Averages"):
+    st.dataframe(avg_lookup.sort_values(["Month", "DayName"]))
