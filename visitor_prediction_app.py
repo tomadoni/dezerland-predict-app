@@ -7,10 +7,10 @@ from datetime import datetime
 model = joblib.load("linear_regression_model.pkl")
 
 # === Page Config ===
-st.set_page_config(page_title="🎢 Dezerland Visitor Predictor", layout="centered")
+st.set_page_config(page_title="🚗 Dezerland Park Visitor Predictor", layout="centered")
 
-st.title("🎢 Dezerland Visitor Predictor")
-st.markdown("Predict daily visitor count using historical trends and weather patterns.")
+st.title("🚗 Dezerland Park Visitor Predictor")
+st.markdown("Predict daily visitor count using historical trends and weather patterns at the Dezerland Park.")
 
 st.divider()
 
