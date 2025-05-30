@@ -5,7 +5,7 @@ import joblib
 from datetime import datetime
 
 # === Set page config (only once) ===
-st.set_page_config(page_title="🎡 Dezerland Predictor Dashboard", layout="centered")
+st.set_page_config(page_title="Dezerland Predictor Dashboard", layout="centered")
 
 # === Load Models ===
 visitor_model = joblib.load("linear_regression_model.pkl")
