@@ -9,7 +9,9 @@ st.set_page_config(page_title="Dezerland Predictor Dashboard", layout="centered"
 
 # === Load Models ===
 visitor_model = joblib.load("linear_regression_model.pkl")
-revenue_model_bundle = joblib.load("revenue_per_visitor_model.pkl")
+
+# Use the XGBoost-trained RPPV model
+revenue_model_bundle = joblib.load("revenue_per_visitor_model_xgb.pkl")
 revenue_model = revenue_model_bundle["model"]
 revenue_features = revenue_model_bundle["features"]
 
@@ -23,12 +25,17 @@ with tab1:
 
     col1, col2 = st.columns(2)
     with col1:
-        month = st.selectbox("📆 Month", range(1, 13), format_func=lambda m: datetime(2024, m, 1).strftime("%B"), key="vis_month")
-        day_of_week = st.selectbox("🗓️ Day of Week", list(range(7)), format_func=lambda d: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][d], key="vis_day")
+        month = st.selectbox("📆 Month", range(1, 13),
+                             format_func=lambda m: datetime(2024, m, 1).strftime("%B"),
+                             key="vis_month")
+        day_of_week = st.selectbox("🗓️ Day of Week", list(range(7)),
+                                   format_func=lambda d: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][d],
+                                   key="vis_day")
 
     with col2:
         precipitation = st.slider("🌧️ Precipitation (inches)", 0.0, 3.0, 0.0, 0.1, key="vis_precip")
-        school_break = st.radio("🏫 Is School Out?", [0, 1], format_func=lambda x: "Yes" if x else "No", key="vis_school")
+        school_break = st.radio("🏫 Is School Out?", [0, 1],
+                                format_func=lambda x: "Yes" if x else "No", key="vis_school")
 
     is_weekend = 1 if day_of_week in [5, 6] else 0
 
@@ -52,12 +59,17 @@ with tab2:
 
     col1, col2 = st.columns(2)
     with col1:
-        month = st.selectbox("📆 Month", range(1, 13), format_func=lambda m: datetime(2024, m, 1).strftime("%B"), key="rev_month")
-        day_of_week = st.selectbox("🗓️ Day of Week", list(range(7)), format_func=lambda d: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][d], key="rev_day")
+        month = st.selectbox("📆 Month", range(1, 13),
+                             format_func=lambda m: datetime(2024, m, 1).strftime("%B"),
+                             key="rev_month")
+        day_of_week = st.selectbox("🗓️ Day of Week", list(range(7)),
+                                   format_func=lambda d: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][d],
+                                   key="rev_day")
 
     with col2:
         precipitation = st.slider("🌧️ Precipitation (inches)", 0.0, 3.0, 0.0, 0.1, key="rev_precip")
-        school_break = st.radio("🏫 Is School Out?", [0, 1], format_func=lambda x: "Yes" if x else "No", key="rev_school")
+        school_break = st.radio("🏫 Is School Out?", [0, 1],
+                                format_func=lambda x: "Yes" if x else "No", key="rev_school")
 
     is_weekend = 1 if day_of_week in [5, 6] else 0
 
@@ -72,11 +84,11 @@ with tab2:
     # Predict visitors
     predicted_visitors = int(visitor_model.predict(revenue_input)[0])
 
-    # Predict revenue per visitor
+    # Predict revenue per visitor using XGBoost
     rppv_input = revenue_input[revenue_features]
     predicted_rppv = float(revenue_model.predict(rppv_input)[0])
 
-    # Total revenue = visitors × RPPV
+    # Compute total revenue
     predicted_total_revenue = predicted_visitors * predicted_rppv
 
     st.metric("👥 Predicted Visitors", f"{predicted_visitors:,}")
@@ -85,3 +97,4 @@ with tab2:
 
     with st.expander("🔍 View Input Data"):
         st.dataframe(revenue_input.T.rename(columns={0: "Value"}))
+
